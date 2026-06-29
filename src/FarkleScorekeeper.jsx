@@ -164,6 +164,7 @@ export default function FarkleScorekeeper() {
   const [pulseKey, setPulseKey] = useState(0);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [showRules, setShowRules] = useState(false);
+  const [lastTurnSnapshot, setLastTurnSnapshot] = useState(null);
 
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayerColor, setNewPlayerColor] = useState(PLAYER_COLORS[0].key);
@@ -247,6 +248,7 @@ export default function FarkleScorekeeper() {
     setTurnLog([]);
     setTurnCounter(0);
     setWinner(null);
+    setLastTurnSnapshot(null);
 
     const merged = [...savedPlayers];
     players.forEach((p) => {
@@ -310,6 +312,21 @@ export default function FarkleScorekeeper() {
 
   function handleBank() {
     if (!currentPlayer || currentTurnScore <= 0) return;
+
+    setLastTurnSnapshot({
+      players,
+      turnOrder,
+      currentTurnIndex,
+      turnLog,
+      turnCounter,
+      gamePhase,
+      finalRoundRemaining,
+      finalRoundTriggeredBy,
+      enteredScore: currentTurnScore,
+      action: "bank",
+      playerName: currentPlayer.name,
+    });
+
     const newTotal = currentPlayer.score + currentTurnScore;
     const updatedPlayers = players.map((p) =>
       p.id === currentPlayer.id ? { ...p, score: newTotal } : p
@@ -344,6 +361,21 @@ export default function FarkleScorekeeper() {
 
   function handleFarkle() {
     if (!currentPlayer) return;
+
+    setLastTurnSnapshot({
+      players,
+      turnOrder,
+      currentTurnIndex,
+      turnLog,
+      turnCounter,
+      gamePhase,
+      finalRoundRemaining,
+      finalRoundTriggeredBy,
+      enteredScore: currentTurnScore,
+      action: "farkle",
+      playerName: currentPlayer.name,
+    });
+
     const newCounter = turnCounter + 1;
     setTurnCounter(newCounter);
 
@@ -360,11 +392,29 @@ export default function FarkleScorekeeper() {
     advanceTurn();
   }
 
+  function undoLastTurn() {
+    if (!lastTurnSnapshot) return;
+    setPlayers(lastTurnSnapshot.players);
+    setTurnOrder(lastTurnSnapshot.turnOrder);
+    setCurrentTurnIndex(lastTurnSnapshot.currentTurnIndex);
+    setTurnLog(lastTurnSnapshot.turnLog);
+    setTurnCounter(lastTurnSnapshot.turnCounter);
+    setGamePhase(lastTurnSnapshot.gamePhase);
+    setFinalRoundRemaining(lastTurnSnapshot.finalRoundRemaining);
+    setFinalRoundTriggeredBy(lastTurnSnapshot.finalRoundTriggeredBy);
+    setCurrentTurnScore(lastTurnSnapshot.enteredScore);
+    setCustomScoreInput("");
+    setWinner(null);
+    setScreen("playing");
+    setLastTurnSnapshot(null);
+  }
+
   function resetToSetup() {
     setPlayers([]);
     setScreen("setup");
     setShowResetConfirm(false);
     setNewPlayerColor(PLAYER_COLORS[0].key);
+    setLastTurnSnapshot(null);
   }
 
   function playAgainSamePlayers() {
@@ -380,6 +430,7 @@ export default function FarkleScorekeeper() {
     setTurnLog([]);
     setTurnCounter(0);
     setWinner(null);
+    setLastTurnSnapshot(null);
     setScreen("playing");
   }
 
@@ -491,6 +542,8 @@ export default function FarkleScorekeeper() {
             gamePhase={gamePhase}
             finalRoundRemaining={finalRoundRemaining}
             finalRoundTriggeredBy={finalRoundTriggeredBy}
+            lastTurnSnapshot={lastTurnSnapshot}
+            undoLastTurn={undoLastTurn}
           />
         )}
 
@@ -502,6 +555,8 @@ export default function FarkleScorekeeper() {
             standings={sortedStandings}
             playAgainSamePlayers={playAgainSamePlayers}
             resetToSetup={resetToSetup}
+            lastTurnSnapshot={lastTurnSnapshot}
+            undoLastTurn={undoLastTurn}
           />
         )}
 
@@ -688,6 +743,8 @@ function PlayingScreen({
   gamePhase,
   finalRoundRemaining,
   finalRoundTriggeredBy,
+  lastTurnSnapshot,
+  undoLastTurn,
 }) {
   const c = getColor(currentPlayer.colorKey, isDark);
   const riskPct = Math.min(100, (currentTurnScore / 3000) * 100);
@@ -779,6 +836,24 @@ function PlayingScreen({
           </button>
         </div>
       </div>
+
+      {lastTurnSnapshot && (
+        <div
+          className={`p-3 rounded-xl border ${T.cardBorder} ${T.card} flex items-center justify-between gap-3 text-sm`}
+        >
+          <span>
+            {lastTurnSnapshot.action === "bank"
+              ? `${lastTurnSnapshot.playerName} banked ${lastTurnSnapshot.enteredScore.toLocaleString()} last turn.`
+              : `${lastTurnSnapshot.playerName} farkled last turn, losing ${lastTurnSnapshot.enteredScore.toLocaleString()}.`}
+          </span>
+          <button
+            onClick={undoLastTurn}
+            className="font-medium underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400 rounded flex-shrink-0"
+          >
+            Edit
+          </button>
+        </div>
+      )}
 
       <div>
         <h3 className={`text-sm font-medium ${T.muted} mb-2`}>Scoreboard</h3>
@@ -916,7 +991,16 @@ function RulesModal({ T, onClose }) {
   );
 }
 
-function FinishedScreen({ T, isDark, winner, standings, playAgainSamePlayers, resetToSetup }) {
+function FinishedScreen({
+  T,
+  isDark,
+  winner,
+  standings,
+  playAgainSamePlayers,
+  resetToSetup,
+  lastTurnSnapshot,
+  undoLastTurn,
+}) {
   const c = getColor(winner.colorKey, isDark);
   return (
     <div className="space-y-6 text-center">
@@ -926,6 +1010,24 @@ function FinishedScreen({ T, isDark, winner, standings, playAgainSamePlayers, re
         <p className={["text-3xl font-bold mb-1", c.text].join(" ")}>{winner.name}</p>
         <p className="text-lg font-medium tabular-nums">{winner.score.toLocaleString()} points</p>
       </div>
+
+      {lastTurnSnapshot && (
+        <div
+          className={`p-3 rounded-xl border ${T.cardBorder} ${T.card} flex items-center justify-between gap-3 text-sm text-left`}
+        >
+          <span>
+            {lastTurnSnapshot.action === "bank"
+              ? `${lastTurnSnapshot.playerName} banked ${lastTurnSnapshot.enteredScore.toLocaleString()} last turn.`
+              : `${lastTurnSnapshot.playerName} farkled last turn, losing ${lastTurnSnapshot.enteredScore.toLocaleString()}.`}
+          </span>
+          <button
+            onClick={undoLastTurn}
+            className="font-medium underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-400 rounded flex-shrink-0"
+          >
+            Edit
+          </button>
+        </div>
+      )}
 
       <div>
         <h3 className={`text-sm font-medium ${T.muted} mb-2 text-left`}>Final standings</h3>
