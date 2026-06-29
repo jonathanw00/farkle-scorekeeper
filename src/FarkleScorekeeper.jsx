@@ -11,7 +11,7 @@ const PLAYER_COLORS = [
   { key: "emerald", label: "Teal" },
   { key: "red", label: "Crimson" },
   { key: "violet", label: "Purple" },
-  { key: "amber", label: "Amber" },
+  { key: "yellow", label: "Yellow" },
 ];
 
 const COLOR_MAP = {
@@ -70,16 +70,16 @@ const COLOR_MAP = {
     softDark: "bg-violet-950/40",
     swatch: "bg-violet-600",
   },
-  amber: {
-    solid: "bg-amber-600",
-    hoverSolid: "hover:bg-amber-700",
-    textLight: "text-amber-600",
-    textDark: "text-amber-400",
-    border: "border-amber-600",
-    ring: "ring-amber-600",
-    softLight: "bg-amber-50",
-    softDark: "bg-amber-950/40",
-    swatch: "bg-amber-600",
+  yellow: {
+    solid: "bg-yellow-600",
+    hoverSolid: "hover:bg-yellow-700",
+    textLight: "text-yellow-600",
+    textDark: "text-yellow-400",
+    border: "border-yellow-600",
+    ring: "ring-yellow-600",
+    softLight: "bg-yellow-50",
+    softDark: "bg-yellow-950/40",
+    swatch: "bg-yellow-600",
   },
 };
 
